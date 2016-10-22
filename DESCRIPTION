@@ -1,0 +1,18 @@
+Package: netvizinf
+Type: Package
+Title: Create network lineups for visual inference on stochastic actor-oriented
+    models
+Version: 0.1.0
+Authors@R: person("Sam", "Tyner", email = "sctyner@iastate.edu",
+  role = c("aut", "cre"))
+Description: Built on top of the RSiena package, using the package to simulate
+    networks from stochastic actor-oriented models. The simulations are used in
+    lineups following the lineup protocal of Buja et al (2009).
+License: GPL-3
+LazyData: TRUE
+Imports:
+    RSiena,
+    ggplot2 (>= 2.0.0),
+    geomnet,
+    dplyr
+RoxygenNote: 5.0.1
