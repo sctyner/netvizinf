@@ -20,7 +20,8 @@
 #' M1eff <- getEffects(mydata)
 #' load("data/M1ests_bigfriends.rda")
 #' M1parms <- colMeans(M1ests_bigfriends)
-#' M1sims5 <- saom_simulate(dat = mydata, struct = M1eff, parms = M1parms, N = 5)
+#' M1sims5 <- saom_simulate(dat = mydata, struct = M1eff,
+#'                        parms = M1parms, N = 5)
 #' }
 #' @export
 

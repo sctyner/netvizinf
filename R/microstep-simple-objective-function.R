@@ -5,7 +5,7 @@ basic_obj_fn <- function(beta, x, i){
 }
 
 microstep <- function(alpha, beta, x0, z, obj_fn = "basic"){
-  browser()
+ # browser()
   nact <- nrow(x0)
   actors <- 1:nact
   p <- length(beta)
@@ -46,9 +46,11 @@ microstep <- function(alpha, beta, x0, z, obj_fn = "basic"){
   return(x1)
 }
 
+set.seed(123456)
 x <- matrix(c(rep(0,4), 1, rep(0,3), 1,1,0,1, 0,0,1,0), ncol = 4)
 
 alpha <- 1
 beta <- c(2,2)
 
 testx1 <- microstep(alpha, beta, x0 = x, z = NULL)
+x2 <- microstep(alpha, beta, x0 = testx1, z = NULL)
