@@ -2,18 +2,15 @@
 % Please edit documentation in R/net-avg.R
 \name{net_avg}
 \alias{net_avg}
-\title{Average network from a simulation}
+\title{Summarize networks simulated from a SAO model by counting edge occurences}
 \usage{
-net_avg(sims, wave, th)
+net_avg(sims, wave)
 }
 \arguments{
 \item{sims}{Output from saom_simulate.}
 
 \item{wave}{integer. Which wave of the network would you like to average?}
-
-\item{th}{numeric. Threshold for edge inclusion i.e. how many times must an edge occur to be included in the "average"}
 }
 \description{
-Average network from a simulation
+Summarize networks simulated from a SAO model by counting edge occurences
 }
-

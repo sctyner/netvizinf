@@ -9,10 +9,9 @@
 net_avg <- function(sims, wave){
   N <- length(sims)
   sims2 <- sims_to_df(sims)
-  sims2 %>% filter(wave == wave) %>%
+  sims2 %>% filter(!is.na(to) & wave == wave) %>%
     group_by(from, to) %>%
     summarise(count = n()) %>%
-    filter(!is.na(to)) %>%
     mutate(weight = ifelse(from==to, 0, count)) -> sims2
   return(sims2)
 }

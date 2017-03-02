@@ -6,12 +6,14 @@
 #' M1sims5df <- sims_to_df(M1sims5)
 #'
 #' @export
+#'
 sims_to_df <- function(sims){
   N <- length(sims)
   waves <- length(sims[[1]][[1]][[1]])
   #count.rows <- rep(0, N)
   #lapply(sims, FUN = function(x) nrow(x[[1]][[1]][[2]]))
   simsdf <- NULL
+  counter <- 1
   for (i in 1:N){
     for(j in 1:waves){
       dat <- as.data.frame(sims[[i]][[1]][[1]][[j]])
@@ -21,8 +23,10 @@ sims_to_df <- function(sims){
       dat2 <- merge(dat, nodes, by.x = "from", by.y = "id", all = T)
       dat2$wave = j
       dat2$sim = i
-      simsdf <- rbind(simsdf, dat2)
+      simsdf[[counter]] <- dat2
+      counter <- counter + 1
     }
   }
-  return(simsdf)
+  mydf <- plyr::rbind.fill(simsdf)
+  return(mydf)
 }
