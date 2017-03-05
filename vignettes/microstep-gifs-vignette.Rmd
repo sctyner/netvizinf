@@ -1,0 +1,91 @@
+---
+title: "Making a 5 microstep GIF"
+author: Sam Tyner
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Where do we start? 
+
+We start with some data that we want to model using `RSiena`. So, let's find some data and fit a simple model to it. 
+
+```{r initializemodel}
+library(RSiena)
+setwd("data/s50_data/")
+friend.data.w1 <- as.matrix(read.table("../data/s50_data/s50-network1.dat"))
+friend.data.w2 <- as.matrix(read.table("../data/s50_data/s50-network2.dat"))
+friend.data.w3 <- as.matrix(read.table("../data/s50_data/s50-network3.dat"))
+drink <- as.matrix(read.table("../data/s50_data/s50-alcohol.dat"))
+smoke <- as.matrix(read.table("../data/s50_data/s50-smoke.dat"))
+friendship <- sienaDependent(
+  array(c(friend.data.w1, friend.data.w2,
+          friend.data.w3),
+        dim = c(50, 50, 3)))
+smoke1 <- coCovar(smoke[ , 1 ])
+alcohol <- varCovar(drink)
+mydata <- sienaDataCreate(friendship, smoke1, alcohol)
+myeffnull <- getEffects(mydata)
+myalgorithm <- sienaAlgorithmCreate(projname = 's50_3')
+set.seed(823746)
+ansnull <- siena07(myalgorithm, data = mydata, effects = myeffnull,
+                   returnChains = TRUE, returnDataFrame = TRUE,
+                   returnDeps = TRUE, silent = TRUE, verbose = FALSE,
+                   batch = TRUE)
+```
+
+## What's next?
+
+Now that we have our fitted model, we want to look "underneath the hood" to see the microsteps that are going on underneath. Let's extract those microsteps. 
+
+```{r getms}
+library(netvizinf)
+library(dplyr)
+library(readr)
+
+ansnullchains <- get_chain_info(ansnull)
+ansnullchains %>% 
+  filter(period == 1) %>%  #only look at chains from wave 1 to wave 2
+  group_by(rep) %>%
+  select(rep, from = X4, to = X5) %>% 
+  mutate(val = as.numeric(!from == to),
+         from = paste0("V", parse_number(from)+1), # make the chains
+         to = paste0("V", parse_number(to)+1)     # match the data vars 
+  ) -> ansnullchainsw1w2
+
+# create microstep data from 1 of the 1000 reps in the chain. 
+ms1 <- listMicrosteps(dat = w1, 
+                      microsteps = filter(ansnullchainsw1w2, rep == 1))
+# we're only going to do the first 5 microsteps. 
+microsteps <- ms1[1:5]
+```
+
+## Get data in a form to visualize
+
+Now, we want to create datasets that are appropriate for visualization using some functions from `netvizinf` and `tweenr`. 
+
+```{r tweeen}
+to_tween <- pretween(microsteps = microsteps, layoutparams = list(n = 50, directed = TRUE))
+library(tweenr)
+tweendat <- tween_states(data = to_tween, 18 ,1,"linear", nframes = 100)
+# create some visualization variables. 
+tweendat$addedge <- as.logical(tweendat$addedge)
+tweendat$rmvedge <- as.logical(tweendat$rmvedge)
+# color new edges
+p <- ggplot(data = unique(tweendat[, c("from", "x.from", "y.from",
+                                  "addedge", "rmvedge", ".frame")]), 
+                          aes(x=x.from, y = y.from, frame = .frame)) +
+  geom_segment(data = tweendat, aes(x = x.from, y = y.from, xend = x.to, yend = y.to, frame = .frame, color = addedge)) + 
+  geom_point(size=5, color = 'grey40') + 
+  geom_text(aes(label=from), size = 3, alpha = .5, color = 'white') + 
+  scale_colour_manual(values = c("black", "red")) + 
+  scale_alpha_identity() + 
+  theme_bw() 
+animation::ani.options(interval = 1/2)
+gganimate(p, "fivemicrosteps_attempt1.gif", title_frame = F)
+
+
+```

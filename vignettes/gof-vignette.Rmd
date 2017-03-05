@@ -1,0 +1,166 @@
+---
+title: "Goodness of Fit Testing in RSiena"
+author: "Samantha Tyner"
+date: "`r Sys.Date()`"
+output:
+  rmarkdown::html_vignette:
+  toc: true
+vignette: >
+  %\VignetteIndexEntry{Goodness of Fit Testing in RSiena}
+  %\VignetteEngine{knitr::rmarkdown}
+  \usepackage[utf8]{inputenc}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Friends Data
+
+First, read in data. 
+```{r friendsdata}
+library(RSiena)
+friend.data.w1 <- as.matrix(read.table("../data/s50-network1.dat"))
+friend.data.w2 <- as.matrix(read.table("../data/s50-network2.dat"))
+friend.data.w3 <- as.matrix(read.table("../data/s50-network3.dat"))
+drink <- as.matrix(read.table("../data/s50-alcohol.dat"))
+friendshipData <- array(c(friend.data.w1, friend.data.w2, friend.data.w3), dim = c(50, 50, 3))
+friendship <- sienaDependent(friendshipData)
+alcohol <- varCovar(drink)
+mydata <- sienaDataCreate(friendship, alcohol)
+```
+
+Next, look at data.
+
+```{r plotfriends, echo=FALSE, warning=FALSE, message=FALSE, fig.align='center', fig.width=8}
+library(dplyr)
+library(tidyr)
+fortify.geomnet <- function(net = NULL, edata = NULL, ndata = NULL){
+  if (is.null(net) && (is.null(edata) || is.null(ndata))){
+    stop("No network data provided. Provide a network object to net OR \ndata frames to both edata and ndata.")
+  }
+  if (!is.null(net) && (!is.null(edata) || !is.null(ndata))){
+    stop("Too much network data provided! Provide one network object to net OR \ndata frames to both edata and ndata.")  
+  }
+  if (!is.null(net)){
+    if(class(net) == "network"){
+      require(network)
+      node.attr <- network::list.vertex.attributes(net)
+      edge.attr <- network::list.edge.attributes(net)
+      N <- network::network.size(net) 
+      P <- length(node.attr)
+      node.data <- data.frame(matrix("", nrow = N, ncol = P+1), stringsAsFactors = F)
+      names(node.data) <- c("ID", node.attr)
+      node.data$ID <- 1:N
+      for (i in 1:P){
+        node.data[,(i+1)] <- network::get.vertex.attribute(net, node.attr[i])
+      }
+      NE <- nrow(network::as.edgelist(net))  
+      P2 <- length(edge.attr)
+      edge.data <- data.frame(network::as.edgelist(net), matrix("", nrow = NE, ncol = P2), stringsAsFactors = F)
+      names(edge.data) <- c("from", "to", edge.attr)
+      
+      for (i in 1:P2){
+        edge.data[,(i+2)] <- network::get.edge.attribute(net, edge.attr[i])
+      }
+      
+      dat <- merge(edge.data, node.data, by.x = "from", by.y = "ID", all = T)
+    } else if (class(net) == "igraph") {
+      require(igraph)
+      
+      node.data <- igraph::as_data_frame(net, what = "vertices")
+      names(node.data)[1] <- "ID"
+      edge.data <- igraph::as_data_frame(net, what = "edges")
+      dat <- merge(edge.data, node.data, by.x = "from", by.y = "ID", all = T )
+    } else if (class(net) == "matrix"){
+      if (dim(net)[1] != dim(net)[2]){
+        stop("Error: Please supply a square adjacency matrix.")
+      }
+      if (!is.null(rownames(net))){
+        ID <- rownames(net)
+      } else if (!is.null(colnames(net))){
+        ID <- colnames(net)
+      } else ID <- 1:ncol(net)
+      net <- as.data.frame(net, stringsAsFactors = F)
+      net$from <- ID 
+      net %>% 
+        tidyr::gather(to, value, -from) %>%
+        filter(value > 0) %>% 
+        mutate(edge.weight = value) %>% 
+        select(from, to, edge.weight) -> edge.data
+      froms <- unique(edge.data$from)
+      tos <- unique(edge.data$to)
+      if (class(froms) != class(tos)){
+        if (class(froms) %in% c("numeric", "integer")){
+          tos <- readr::parse_number(tos)
+        } else if (class(froms) == "factor" && class(tos) == "character"){
+          froms <- as.character(froms)
+        } else if (class(tos) == "factor" && class(froms) == "character"){
+          tos <- as.character(tos)
+        } else {stop("Error: Cannot match from and to columns. Please provide an\nadjacency matrix with row or column names.")}
+      }
+      allnodes <- sort( unique(
+        c(unique(froms), unique(tos))
+      ) )
+      node.data <- data.frame(id = allnodes, stringsAsFactors = F)  
+      dat <- merge(edge.data, node.data, by.x = 'from', by.y = 'id')
+    }
+  } else {
+    
+    dat <- merge(edata, ndata, by.x = names(edata)[1], by.y = names(ndata)[1], all = T)
+  }
+  
+  return(dat)
+}
+
+fddf1 <- fortify.geomnet(net = friend.data.w1)
+fdd1 <- fortify.geomnet(edata = fddf1, ndata = data.frame(id = 1:50, drink = drink[,1]))
+fddf2 <- fortify.geomnet(net = friend.data.w2)
+fdd2 <- fortify.geomnet(edata = fddf2, ndata = data.frame(id = 1:50, drink = drink[,2]))
+fddf3 <- fortify.geomnet(net = friend.data.w3)
+fdd3 <- fortify.geomnet(edata = fddf3, ndata = data.frame(id = 1:50, drink = drink[,3]))
+fdd1$wave <- 1
+fdd2$wave <- 2
+fdd3$wave <- 3
+fd <- rbind(fdd1, fdd2, fdd3)
+fd$from <- readr::parse_number(fd$from)
+fd$to <- readr::parse_number(fd$to)
+library(geomnet)
+ggplot(data = fd) +
+  geom_net(aes(from_id = from, to_id = to, colour = as.factor(drink)),
+           directed = T, size = 1, linewidth = .5, arrowsize = .25, fiteach = T) +
+  theme_net() +
+  scale_colour_brewer(palette = "YlOrRd",na.value = 'grey40') +
+  theme(legend.position = "bottom") +
+  facet_wrap(~wave)
+```
+
+## Fitting the Model
+
+```{r fitmodel}
+M1eff <- getEffects(mydata)
+myalgorithm <- sienaAlgorithmCreate(projname = Sys.time(), n3 = 1000)
+m1fit <- siena07(myalgorithm, data = mydata, returnDeps = TRUE, 
+                   effects = M1eff,batch=TRUE, verbose = FALSE, 
+                   silent = TRUE)
+#summary(m1fit)
+```
+
+```{r gof}
+out.gof <- sienaGOF(m1fit, OutdegreeDistribution, varName = "friendship")
+in.gof <- sienaGOF(m1fit, IndegreeDistribution, varName = "friendship")
+summary(out.gof)
+summary(in.gof)
+```
+
+## GoF Visualization
+
+```{r plotgof, fig.align='center', fig.width=8}
+library(lattice)
+plot(out.gof)
+```
+
+
+```{r plotgof2, fig.align='center', fig.width=8}
+plot(in.gof)
+```
