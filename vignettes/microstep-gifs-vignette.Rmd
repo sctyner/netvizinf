@@ -5,7 +5,7 @@ output: github_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, cache = TRUE)
 ```
 
 
@@ -15,19 +15,16 @@ We start with some data that we want to model using `RSiena`. So, let's find som
 
 ```{r initializemodel}
 library(RSiena)
-setwd("data/s50_data/")
-friend.data.w1 <- as.matrix(read.table("../data/s50_data/s50-network1.dat"))
-friend.data.w2 <- as.matrix(read.table("../data/s50_data/s50-network2.dat"))
-friend.data.w3 <- as.matrix(read.table("../data/s50_data/s50-network3.dat"))
-drink <- as.matrix(read.table("../data/s50_data/s50-alcohol.dat"))
-smoke <- as.matrix(read.table("../data/s50_data/s50-smoke.dat"))
+friend.data.w1 <- as.matrix(read.table("../data/s50-network1.dat"))
+friend.data.w2 <- as.matrix(read.table("../data/s50-network2.dat"))
+friend.data.w3 <- as.matrix(read.table("../data/s50-network3.dat"))
+drink <- as.matrix(read.table("../data/s50-alcohol.dat"))
 friendship <- sienaDependent(
   array(c(friend.data.w1, friend.data.w2,
           friend.data.w3),
         dim = c(50, 50, 3)))
-smoke1 <- coCovar(smoke[ , 1 ])
 alcohol <- varCovar(drink)
-mydata <- sienaDataCreate(friendship, smoke1, alcohol)
+mydata <- sienaDataCreate(friendship, alcohol)
 myeffnull <- getEffects(mydata)
 myalgorithm <- sienaAlgorithmCreate(projname = 's50_3')
 set.seed(823746)
@@ -45,7 +42,8 @@ Now that we have our fitted model, we want to look "underneath the hood" to see 
 library(netvizinf)
 library(dplyr)
 library(readr)
-
+library(sna)
+library(network)
 ansnullchains <- get_chain_info(ansnull)
 ansnullchains %>% 
   filter(period == 1) %>%  #only look at chains from wave 1 to wave 2
@@ -57,7 +55,9 @@ ansnullchains %>%
   ) -> ansnullchainsw1w2
 
 # create microstep data from 1 of the 1000 reps in the chain. 
-ms1 <- listMicrosteps(dat = w1, 
+library(geomnet)
+wave1friends <- fortify(as.adjmat(friend.data.w1))
+ms1 <- listMicrosteps(dat = wave1friends, 
                       microsteps = filter(ansnullchainsw1w2, rep == 1))
 # we're only going to do the first 5 microsteps. 
 microsteps <- ms1[1:5]
@@ -75,6 +75,9 @@ tweendat <- tween_states(data = to_tween, 18 ,1,"linear", nframes = 100)
 tweendat$addedge <- as.logical(tweendat$addedge)
 tweendat$rmvedge <- as.logical(tweendat$rmvedge)
 # color new edges
+library(ggplot2)
+library(animation)
+library(gganimate)
 p <- ggplot(data = unique(tweendat[, c("from", "x.from", "y.from",
                                   "addedge", "rmvedge", ".frame")]), 
                           aes(x=x.from, y = y.from, frame = .frame)) +
@@ -86,6 +89,4 @@ p <- ggplot(data = unique(tweendat[, c("from", "x.from", "y.from",
   theme_bw() 
 animation::ani.options(interval = 1/2)
 gganimate(p, "fivemicrosteps_attempt1.gif", title_frame = F)
-
-
 ```
