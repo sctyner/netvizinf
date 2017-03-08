@@ -48,6 +48,8 @@ pretween_vertices <- function(microsteps, layoutparams){
   changedf$id <- factor(changedf$id, levels = levels(step3$id))
   step4 <- left_join(step3, changedf, by = c("id" = "id", "ms" = "ms")) %>%
     replace_na(list(addedge = FALSE, rmvedge = FALSE))
+  step4$addedge <- as.numeric(step4$addedge)
+  step4$rmvedge <- as.numeric(step4$rmvedge)
   final_step <- split(step4, as.factor(step4$ms))
   return(final_step)
 }

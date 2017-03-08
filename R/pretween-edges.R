@@ -16,14 +16,14 @@ pretween_edges <- function(microsteps){
     old <- microsteps[[i-1]]
     new <- microsteps[[i]]
     # find matching rows
-    #newInold <- dplyr:::match_data_frame(new[,c("from", "to")], old[,c("from", "to")])
-    #oldInnew <- dplyr:::match_data_frame(old[,c("from", "to")], new[,c("from", "to")])
+    newInold <- dplyr:::match_data_frame(new[,c("from", "to")], old[,c("from", "to")])
+    oldInnew <- dplyr:::match_data_frame(old[,c("from", "to")], new[,c("from", "to")])
     # if any of the new in old are NA, that means there's a new edge in new that wasn't in old.
-    #if (anyNA(newInold)){
-    #  new[[which(is.na(newInold)),"addedge"]] <- TRUE
-    #} else if (anyNA(oldInnew)) {
-    #  old[[which(is.na(oldInnew)), "rmvedge"]] <- TRUE
-    #}
+    if (anyNA(newInold)){
+     new[[which(is.na(newInold)),"addedge"]] <- TRUE
+    } else if (anyNA(oldInnew)) {
+     old[[which(is.na(oldInnew)), "rmvedge"]] <- TRUE
+    }
     microsteps[[i-1]] <- old
     microsteps[[i]] <- new
     microsteps[[i]]$microstep <- i-1

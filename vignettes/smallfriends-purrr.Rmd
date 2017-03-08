@@ -1,0 +1,130 @@
+---
+title: "Small Friends Animation"
+author: "Sam Tyner"
+date: "3/8/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Get Small Friends Data
+
+```{r smfriends}
+library(RSiena)
+library(tidyverse)
+library(sna)
+library(network)
+friend.data.w1 <- as.matrix(read.table("../data/s50-network1.dat"))
+friend.data.w2 <- as.matrix(read.table("../data/s50-network2.dat"))
+friend.data.w3 <- as.matrix(read.table("../data/s50-network3.dat"))
+drink <- as.matrix(read.table("../data/s50-alcohol.dat"))
+fd2.w1 <- friend.data.w1[20:35,20:35]
+fd2.w2 <- friend.data.w2[20:35,20:35]
+fd2.w3 <- friend.data.w3[20:35,20:35]
+friendshipData <- array(c(fd2.w1, fd2.w2,fd2.w3), dim = c(16, 16, 3))
+friendship <- sienaDependent(friendshipData)
+alcohol <- varCovar(drink[20:35,])
+mydata <- sienaDataCreate(friendship, alcohol)
+myeffnull <- getEffects(mydata)
+myalgorithm <- sienaAlgorithmCreate(projname = 's16_3')
+set.seed(823746)
+ansnull <- siena07(myalgorithm, data = mydata, effects = myeffnull,
+                   returnChains = TRUE, returnDataFrame = TRUE,
+                   returnDeps = TRUE, silent = TRUE, verbose = FALSE,
+                   batch = TRUE)
+ansnullchains <- get_chain_info(ansnull)
+ansnullchains %>% 
+  filter(period == 1) %>%  #only look at chains from wave 1 to wave 2
+  group_by(rep) %>%
+  select(rep, from = X4, to = X5) %>% 
+  mutate(val = as.numeric(!from == to),
+         from = paste0("V", parse_number(from)+1), # make the chains
+         to = paste0("V", parse_number(to)+1)) -> ansnullchainsw1w2
+
+# create microstep data from 1 of the 1000 reps in the chain. 
+library(geomnet)
+colnames(fd2.w1) <- paste0("V", 1:16)
+rownames(fd2.w1) <- paste0("V", 1:16)
+wave1friends <- fortify(as.adjmat(fd2.w1))
+ms1 <- listMicrosteps(dat = wave1friends, 
+                      microsteps = filter(ansnullchainsw1w2, rep == 1))
+# we're only going to do the first 5 microsteps. 
+microsteps <- ms1[1:5]  
+
+ptv <- pretween_vertices(microsteps, layoutparams = list(n = 16))
+
+library(tweenr)
+
+to_nest <- tween_states(ptv, 10, 1, "linear", 50)
+to_nest %>% nest(-c(.frame, ms)) -> tweennest 
+pte <- pretween_edges(microsteps = microsteps)
+
+joinData <- function(currentlayout, currentMS, microsteps){
+  if (sum(currentlayout$addedge) == 0 | currentMS == floor(currentMS)){
+    appropriate_el <- microsteps[[floor(currentMS) + 1]] # bc ms starts at 0
+    joinfrompoint <- left_join(appropriate_el, currentlayout, by = c("from" = "id", "addedge" = "addedge", "rmvedge" = "rmvedge"))
+    names(joinfrompoint)[names(joinfrompoint) %in% c("x", "y")] <- c("x.from", "y.from")
+    # addedge logical causes problems. overwrite them.
+    missfromidx <- which(is.na(joinfrompoint$x.from))
+    froms <- which(joinfrompoint$from %in%
+                     unique(joinfrompoint$from[missfromidx]))
+    joinfrompoint[missfromidx, c("x.from", "y.from")] <- 
+      joinfrompoint[setdiff(froms, missfromidx), c("x.from", "y.from")]
+    rmvcols <- which(names(currentlayout) %in% c("addedge","rmvedge"))
+    jointopoint <- left_join(joinfrompoint, currentlayout[,-rmvcols], by = c("to" = "id"))
+    names(jointopoint)[names(jointopoint) %in% c("x", "y")] <- c("x.to", "y.to")
+  } else if (any(currentlayout$addedge > 0)) {
+      appropriate_el <- microsteps[[ceiling(currentMS) + 1]] # bc ms starts at 0
+    joinfrompoint <- left_join(appropriate_el, currentlayout, by = c("from" = "id", "addedge" = "addedge", "rmvedge" = "rmvedge"))
+    names(joinfrompoint)[names(joinfrompoint) %in% c("x", "y")] <- c("x.from", "y.from")
+    # addedge logical causes problems. overwrite them.
+    missfromidx <- which(is.na(joinfrompoint$x.from))
+    froms <- which(joinfrompoint$from %in%
+                     unique(joinfrompoint$from[missfromidx]))
+    joinfrompoint[missfromidx, c("x.from", "y.from")] <- 
+      joinfrompoint[setdiff(froms, missfromidx), c("x.from", "y.from")]
+    rmvcols <- which(names(currentlayout) %in% c("addedge","rmvedge"))
+    jointopoint <- left_join(joinfrompoint, currentlayout[,-rmvcols], by = c("to" = "id"))
+    names(jointopoint)[names(jointopoint) %in% c("x", "y")] <- c("x.to", "y.to")
+  }
+  return(jointopoint)
+}
+
+library(purrr)
+tweennest %>% 
+  group_by(.frame) %>%
+  mutate(joineddf = map(.x = data, .f = joinData, 
+                        currentMS = ms, microsteps = pte)) -> testpurrmeth
+
+testpurrmeth2 <- testpurrmeth[,-3] %>% unnest()
+
+testpurrplot <- ggplot(data = testpurrmeth2,
+                       aes(x = x.from, y = y.from, xend = x.to, 
+                           yend = y.to, frame = .frame)) +
+  geom_segment(aes(alpha = 1 - (addedge + rmvedge), color = 1 - (addedge + rmvedge))) + 
+  geom_point(shape = 21, aes(fill = addedge + rmvedge), color = 'grey40') + 
+  scale_fill_continuous(low = 'grey40', high = 'green', guide = guides(fill = "none")) + 
+  scale_color_continuous(low = "red", high = 'black', guide = guides(color = "none")) + 
+  scale_alpha_identity() + 
+  theme_void()
+animation::ani.options(interval = 1/10)
+gganimate(testpurrplot, "purrmethod.gif", title_frame = F)
+
+purrmetfrm1 <- filter(testpurrmeth2, .frame %in% 1:10)
+
+ggplot(data = purrmetfrm1,
+                       aes(x = x.from, y = y.from)) +
+  geom_segment(aes(xend = x.to, yend = y.to, 
+                   color = 1 - (addedge + rmvedge))) + 
+  geom_point(data = purrmetfrm1[, -grep(pattern = "to", names(purrmetfrm1))], shape = 21, aes(fill = as.factor(addedge + rmvedge)), color = 'grey40') + 
+  scale_fill_manual(values = c('grey40','green')) + 
+  scale_color_continuous(low = "red", high = 'black') + 
+  scale_alpha_identity() + 
+  theme_void() + 
+  facet_wrap(~.frame)
+
+```
+
+
