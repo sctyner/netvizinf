@@ -68,12 +68,11 @@ microsteps <- ms1[1:5]
 Now, we want to create datasets that are appropriate for visualization using some functions from `netvizinf` and `tweenr`. 
 
 ```{r tweeen}
-to_tween <- pretween(microsteps = microsteps, layoutparams = list(n = 50, directed = TRUE))
+to_tween <- pretween_vertices(microsteps = microsteps, layoutparams = list(n = 50))
 library(tweenr)
-tweendat <- tween_states(data = to_tween, 18 ,1,"linear", nframes = 100)
-# create some visualization variables. 
-tweendat$addedge <- as.logical(tweendat$addedge)
-tweendat$rmvedge <- as.logical(tweendat$rmvedge)
+tweendat <- tween_states(data = to_tween, 20 ,1,"linear", nframes = 100)
+# create some visualization variables.
+pte <- pretween_edges(microsteps)
 # color new edges
 library(ggplot2)
 library(animation)
@@ -83,10 +82,143 @@ p <- ggplot(data = unique(tweendat[, c("from", "x.from", "y.from",
                           aes(x=x.from, y = y.from, frame = .frame)) +
   geom_segment(data = tweendat, aes(x = x.from, y = y.from, xend = x.to, yend = y.to, frame = .frame, color = addedge)) + 
   geom_point(size=5, color = 'grey40') + 
-  geom_text(aes(label=from), size = 3, alpha = .5, color = 'white') + 
-  scale_colour_manual(values = c("black", "red")) + 
+  #geom_text(aes(label=from), size = 3, alpha = .5, color = 'white') + 
+  scale_colour_manual(values = c("black", "red"), guide = guides(color = "none")) + 
   scale_alpha_identity() + 
-  theme_bw() 
-animation::ani.options(interval = 1/2)
+  theme_void() 
+animation::ani.options(interval = 1/4)
 gganimate(p, "fivemicrosteps_attempt1.gif", title_frame = F)
+```
+
+## My incredibly screwed up attempt to do this more efficiently 
+```{r justabunchofjunk}
+# baby edge disappear example
+
+layout1 <- data.frame(x = c(0,1), y = c(0,1), id = c("V1", "V2"), ms = 0, rmvedge = c(T,F))
+layout2 <- data.frame(x = c(0,1), y = c(1,0), id = c("V1", "V2"), ms = 1, rmvedge = F)
+
+babytweend <- tween_states(list(layout1, layout2), 5,1,"linear", 5)
+
+babyedge1 <- data.frame(from = "V1", to = "V2", rmvedge = TRUE, ms = 0)
+babyedge2 <- data.frame(from = c("V1", "V2"), to = NA, rmvedge = FALSE, ms = 1)
+babyedges <- rbind(babyedge1, babyedge2)
+
+babystep1 <- merge(babyedges, babytweend, by.x = c("from", "rmvedge", "ms"), by.y = c("id", "rmvedge", "ms"), all.y = T) %>% arrange(.frame, x,y)
+babystep2 <- merge(babystep1, babytweend[,-5], by.x = c("to", "ms",".frame"), by.y = c("id", "ms",".frame"), all.x=T)
+
+idx <- is.na(babystep2$to) & babystep2$ms < 1 & babystep2$ms > 0 & babystep2$from == "V1"
+
+babystep2$to[idx] <- "V2"
+fms <- babystep2$.frame[idx]
+babystep2[idx, c("x.y", "y.y")] <- babystep2[babystep2$from == "V2" & babystep2$.frame %in% fms,c("x.x", "y.x")]
+
+ggplot(data = babystep2, aes(x = x.x, y = y.x, frame = .frame)) +
+  geom_segment(aes(xend = x.y, yend = y.y, alpha = 1-ms), color = 'red') + 
+  geom_point(color = 'grey40') + 
+  scale_alpha_identity() + 
+  facet_wrap(~.frame)
+  
+
+# bigger example 
+microsteps <- ms1[1:5]
+to_tween <- pretween_vertices(microsteps = microsteps, layoutparams = list(n = 50))
+pte <- pretween_edges(microsteps = microsteps)
+
+tweendat <- tween_states(data = to_tween, statelength = 18, 1, "linear",100)
+tweendat$addedge <- as.logical(tweendat$addedge)
+tweendat$rmvedge <- as.logical(tweendat$rmvedge)
+
+# first, split according to microstep. 
+listTweened <- split(tweendat, as.factor(tweendat$ms))
+
+listPostTween <- list()
+# then, join edges
+for (i in 1:length(listTweened)){
+  # if rmvedge, merge 'old' edgelist with tweened
+  currentMS <- unique(listTweened[[i]]$ms)
+  ms_from_edges <- floor(currentMS)
+  
+  if(sum(listTweened[[i]]$addedge) > 0 & currentMS != round(currentMS)) {
+    step1 <- merge(microsteps[[currentMS+2]], listTweened[[i]], 
+                   by.x = "from", 
+                   by.y = "id", all.x = TRUE)
+    names(step1)[names(step1) %in% c("x", "y")] <- c("x.from", "y.from")
+    step2 <- merge(step1, listTweened[[i]], 
+                   by.x = c("to", "ms", "addedge", "rmvedge",".frame"), 
+                   by.y = c("id", "ms","addedge", "rmvedge",".frame"), 
+                   all.x = TRUE)
+    names(step2)[names(step2) %in% c("x", "y")]  <- c("x.to", "y.to")
+    listPostTween[[i]] <- step2
+  } else {
+    step1 <- merge(microsteps[[ms_from_edges+1]], listTweened[[i]], 
+                   by.x = "from", by.y = "id", all.x = TRUE)
+    names(step1)[names(step1) %in% c("x", "y")] <- c("x.from", "y.from")
+    step2 <- merge(step1, listTweened[[i]],
+                  by.x = c("to", "ms", "addedge", "rmvedge",".frame"),
+                  by.y = c("id", "ms","addedge", "rmvedge",".frame"),
+                  all.x = TRUE)
+    names(step2)[names(step2) %in% c("x", "y")]  <- c("x.to", "y.to")
+    listPostTween[[i]] <- step2
+  }
+}
+
+# merge first, then go back and overwrite. 
+# use all.y so that all frames are included, and none are NA. 
+#step1 <- merge(pte, tweendat, by.x = c("from","addedge", "rmvedge",  "microstep"), by.y = c("id", "addedge", "rmvedge","ms"), all.y = TRUE)
+#names(step1)[names(step1) %in% c("x", "y")] <- c("x.from", "y.from")
+# remove the logicals in tweened because they're only relevant to the 'from' node 
+#lgcls <- names(tweendat) %in% c("addedge", "rmvedge")
+#step2 <- merge(step1, tweendat[,-which(lgcls)], by.x = c("to", "microstep", ".frame"), by.y = c("id", "ms",".frame"), all.x = TRUE)
+#names(step2)[names(step2) %in% c("x", "y")]  <- c("x.to", "y.to")
+
+#B <- length(unique(pte$microstep))
+
+# for (i in 1:B){
+#   new_data_to_plot <- list()
+#   msid <- unique(pte$microstep)[i]
+#   nodesub <- filter(tweendat, ms == msid)
+#   edgesub <- filter(pte, microstep == msid)
+#   allsub <- filter(step2, microstep >= msid & microstep <= msid+1)
+#   if (sum(edgesub$rmvedge) > 0){
+#     fromid <- unique(edgesub$from[which(edgesub$rmvedge)])
+#     toid <- unique(edgesub$to[which(edgesub$rmvedge)])
+#     idx_to_change <- which(is.na(allsub$to) & allsub$microstep < msid+1 &
+#                              allsub$microstep > msid & allsub$from == fromid)
+#     allsub$to[idx_to_change] <- toid
+#     fms <- allsub$.frame[idx_to_change]
+#     allsub[idx_to_change, c("x.to", "y.to")] <- allsub[which(allsub$from == toid & 
+#                                                                allsub$.frame %in% fms), c("x.from", "y.from")]
+#     new_data_to_plot[[i]] <- allsub
+#   } else if (sum(edges))
+# }
+
+# if (sum(listTweened[[i]]$rmvedge) > 0){
+#   step1 <- merge(microsteps[[ms_from_edges+1]], listTweened[[i]], 
+#                  by.x = "from", 
+#                  by.y = "id", all.x = TRUE)
+#   names(step1)[names(step1) %in% c("x", "y")] <- c("x.from", "y.from")
+#   step2 <- merge(step1, listTweened[[i]], 
+#                  by.x = c("to", "ms", "addedge", "rmvedge",".frame"), 
+#                  by.y = c("id", "ms","addedge", "rmvedge",".frame"), 
+#                  all.x = TRUE)
+#   names(step2)[names(step2) %in% c("x", "y")]  <- c("x.to", "y.to")
+#   listPostTween[[i]] <- step2
+# } else if (sum(listTweened[[i]]$addedge) > 0 & ceiling(currentMS) < ms_from_edges+1){
+#   
+# }
+# if addedge, merge 'new' edgelist with tweened
+
+postTweendf <- do.call("rbind", listPostTween)
+
+testp <- ggplot(data = postTweendf, aes(x = x.from, y = y.from, xend = x.to, yend = y.to, frame = .frame, color = addedge)) +
+  geom_segment(aes(color = ms)) + 
+  geom_point(size=4, color = 'grey40') + 
+  #geom_text(aes(label=from), size = 3, alpha = .5, color = 'white') + 
+  #scale_colour_manual(guide = guides(color = "none")) + 
+  scale_alpha_identity() + 
+  theme_void() 
+animation::ani.options(interval = 1/10)
+gganimate(testp, "newmethod.gif", title_frame = F)
+
+
 ```
