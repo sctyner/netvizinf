@@ -23,6 +23,9 @@ pretween_edges <- function(microsteps){
      new[[which(is.na(newInold)),"addedge"]] <- TRUE
     } else if (anyNA(oldInnew)) {
      old[[which(is.na(oldInnew)), "rmvedge"]] <- TRUE
+    } else {
+      new <- new
+      old <- old
     }
     microsteps[[i-1]] <- old
     microsteps[[i]] <- new

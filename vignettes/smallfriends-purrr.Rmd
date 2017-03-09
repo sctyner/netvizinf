@@ -54,7 +54,7 @@ ms1 <- listMicrosteps(dat = wave1friends,
 microsteps <- ms1[1:5]  
 
 ptv <- pretween_vertices(microsteps, layoutparams = list(n = 16))
-
+ptv <- final_step
 library(tweenr)
 
 to_nest <- tween_states(ptv, 10, 1, "linear", 50)
@@ -112,19 +112,80 @@ testpurrplot <- ggplot(data = testpurrmeth2,
 animation::ani.options(interval = 1/10)
 gganimate(testpurrplot, "purrmethod.gif", title_frame = F)
 
-purrmetfrm1 <- filter(testpurrmeth2, .frame %in% 1:10)
+purrmetfrm1 <- filter(testpurrmeth2, .frame %in% 1:20)
+purrmetfrm1 <- purrmetfrm1 %>% 
+  mutate(.alpha = ifelse(addedge + rmvedge == 0, 1, 1-ms))
 
-ggplot(data = purrmetfrm1,
-                       aes(x = x.from, y = y.from)) +
-  geom_segment(aes(xend = x.to, yend = y.to, 
-                   color = 1 - (addedge + rmvedge))) + 
-  geom_point(data = purrmetfrm1[, -grep(pattern = "to", names(purrmetfrm1))], shape = 21, aes(fill = as.factor(addedge + rmvedge)), color = 'grey40') + 
+ggplot() + 
+  geom_segment(data = purrmetfrm1, aes(x = x.from, y = y.from, 
+                                         xend = x.to, yend = y.to,
+                                         color = 1 - .alpha)) + 
+  geom_point(data = filter(to_nest, , aes(x = x, y = x, fill = addedge + rmvedge), 
+             shape = 21, color = 'grey40') + 
   scale_fill_manual(values = c('grey40','green')) + 
   scale_color_continuous(low = "red", high = 'black') + 
   scale_alpha_identity() + 
   theme_void() + 
   facet_wrap(~.frame)
 
+ggplot(data = to_nest %>% filter(.frame %in% 1:16)) + 
+  geom_point(shape = 21, aes(x=x, y=y, fill = addedge + rmvedge), color = 'grey40') + 
+  scale_fill_continuous(low = 'grey40', high = 'green') + 
+  theme_void() +
+  facet_wrap(~.frame)
+
+ggplot() + 
+  geom_curve(data = purrmetfrm1 %>% filter(.frame %in% 1:15), curvature = .1,
+             aes(x = x.from, y = y.from, xend = x.to, yend = y.to,
+                 alpha = .alpha)) + 
+  geom_point(data = filter(to_nest, .frame %in% 1:15), shape = 21,
+             aes(x=x, y=y, fill = addedge + rmvedge), 
+             color = 'grey40') +
+  scale_fill_continuous(low = "grey40", high = "green") + 
+  scale_alpha_identity() + 
+  facet_wrap(~.frame) + 
+  theme_void()
 ```
 
+Okay, I think I've decided to do this with 2 separate data frames: one for nodes (`to_nest`) and one for edges (`testpurrmeth2` above). Now that the plots are looking okay, need to get the colors right.
+
+```{r colorings}
+# edge color 
+testpurrmeth2 <- testpurrmeth2 %>% 
+  mutate(ecolor = ifelse(addedge + rmvedge == 0, 
+                         rgb(0, 0, 0, alpha = 1), NA)
+         ) 
+rmvidx <- which(testpurrmeth2$rmvedge != 0) 
+ealpha <- 1 - (testpurrmeth2[rmvidx,"ms"][[1]] - testpurrmeth2[rmvidx,"microstep"][[1]])
+testpurrmeth2[rmvidx,"ecolor"] <- rgb(1, 0, 0, alpha = ealpha) 
+addidx <- which(testpurrmeth2$addedge != 0)
+
+# vertex color
+vertexdata <- to_nest 
+vertexdata <- vertexdata %>% mutate(vcolor = 
+                                      ifelse(addedge + rmvedge == 0, 
+              rgb(102, 102, 102, alpha = 255, maxColorValue = 255), 
+                         NA))
+rmvidx <- which(vertexdata$rmvedge != 0) 
+vertexdata[rmvidx,"vcolor"] <- (vertexdata[rmvidx,] %>% group_by(floor(ms)) %>% 
+  mutate(count = seq_len(n())) %>% 
+  mutate(vcolor = tween_color(c("blue", "grey40"), n = n(), ease = "quartic-in")[[1]][count]) %>% ungroup() %>% select(vcolor))[[1]]
+
+testpurrmeth2[which(testpurrmeth2$y.from == testpurrmeth2$y.to),'y.to'] <- testpurrmeth2[which(testpurrmeth2$y.from == testpurrmeth2$y.to),'y.to'] + .000001
+
+p3 <- ggplot() + 
+  geom_curve(data = testpurrmeth2, curvature = .1,
+             aes(x = x.from, y = y.from, xend = x.to, yend = y.to,
+                 color = ecolor, frame = .frame)) + 
+  scale_color_identity() +
+  geom_point(data = vertexdata, shape = 21,
+             aes(x=x, y=y, fill = vcolor, frame = .frame), 
+             color = 'grey40') +
+  scale_fill_identity() + 
+  theme_void()
+
+animation::ani.options(interval = 1/10)
+gganimate(p3, "purrmethod2dfs.gif", title_frame = F)
+
+```
 
