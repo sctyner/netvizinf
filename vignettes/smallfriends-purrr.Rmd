@@ -122,30 +122,9 @@ Okay, I think I've decided to do this with 2 separate data frames: one for nodes
 
 ```{r addcolor}
 # edge color 
-edges_unnested_color <- edges_unnested %>% 
-  mutate(ecolor = ifelse(addedge + rmvedge == 0, 
-                         "grey20", NA), 
-         esize = 1
-  ) 
-rmvidx <- which(edges_unnested_color$rmvedge != 0) 
-edges_unnested_color[rmvidx,"ecolor"] <- (edges_unnested_color[rmvidx,] %>% 
-  group_by(from, to) %>% 
-  mutate(count = seq_len(n())) %>% 
-  mutate(ecolor = tween_color(c("red", "white"), n = n(), ease = "quartic-in")[[1]][count]) %>% ungroup() %>% select(ecolor))[[1]]
-edges_unnested_color[rmvidx,"esize"] <- (edges_unnested_color[rmvidx,] %>% 
-  group_by(from, to) %>% 
-  mutate(count = seq_len(n())) %>% 
-  mutate(esize = tween_numeric(c(4, 0), n = n(), ease = "quartic-in")[[1]][count]) %>% ungroup() %>% select(esize))[[1]]
+edges_unnested_color <- colorEdges(edges_unnested = unnested_edges)
 
-addidx <- which(edges_unnested_color$addedge != 0)
-edges_unnested_color[addidx,"ecolor"] <- (edges_unnested_color[addidx,] %>% 
-  group_by(from, to) %>% 
-  mutate(count = seq_len(n())) %>% 
-  mutate(ecolor = tween_color(c("white", "red"), n = n(), ease = "quartic-out")[[1]][count]) %>% ungroup() %>% select(ecolor))[[1]]
-edges_unnested_color[addidx,"esize"] <- (edges_unnested_color[addidx,] %>% 
-  group_by(from, to) %>% 
-  mutate(count = seq_len(n())) %>% 
-  mutate(esize = tween_numeric(c(0,4), n = n(), ease = "quartic-out")[[1]][count]) %>% ungroup() %>% select(esize))[[1]]
+
 
 #ealpha <- 1 - (edges_unnested_color[rmvidx,"ms"][[1]] - #edges_unnested_color[rmvidx,"microstep"][[1]])
 #edges_unnested_color[rmvidx,"ecolor"] <- rgb(1, 0, 0, alpha = ealpha) 
@@ -207,5 +186,54 @@ plotsmallfriends <- ggplot() +
   theme_void()
 animation::ani.options(interval = 1/3)
 gganimate(plotsmallfriends, "purrmethod_smallfriendslabeled2.gif", title_frame = F)
+```
+
+
+## More microsteps example
+
+```{r largerexample}
+pte <- pretween_edges(microsteps = ms1)
+ptv <- pretween_vertices(pte = pte, layoutparams = list(n = 16))
+library(tweenr)
+
+tweened_nodes <- tween_states(ptv, 10, 2, "linear", 500)
+tweened_nodes$addedge <- as.logical(tweened_nodes$addedge)
+tweened_nodes$rmvedge <- as.logical(tweened_nodes$rmvedge)
+tweened_nodes %>% nest(-c(.frame, ms)) -> tweened_nested
+
+library(purrr)
+tweened_nested %>% 
+  group_by(.frame) %>%
+  mutate(joineddf = map(.x = data, .f = joinData, 
+                        currentMS = ms, microsteps = pte)) -> joined_data
+
+unnested_edges <- joined_data[,-3] %>% unnest()
+#edges_unnested <- testpurrmeth2
+
+# edge color 
+edges_unnested_color <- colorEdges(edges_unnested = unnested_edges)
+
+# vertex color
+vertexdata_colors <- colorVertices(vertexdata = tweened_nodes, pte = pte)
+
+# plot
+plotsmallfriends_allms <- ggplot() + 
+  geom_curve(data = edges_unnested_color, curvature = .1,
+             aes(x = x.from, y = y.from, xend = x.to, yend = y.to,
+                 color = ecolor, frame = .frame, size = esize/2)) + 
+  scale_color_identity() +
+  geom_point(data = vertexdata_colors, shape = 21,
+             aes(x=x, y=y, fill = vcolor, frame = .frame, size = 4*vsize), 
+             color = 'grey40') +
+  scale_size_identity() + 
+  #geom_text(data = vertexdata, size = 3, 
+  #           aes(x=x, y=y, label = id, frame = .frame), 
+  #           color = "black") + 
+  #geom_label(data = vertexdata %>% filter(id == "V1"), aes(frame = .frame, x = rep(-1,58), y = rep(2,58), label = round(ms,4))) + 
+  scale_fill_identity() + 
+  theme_void()
+animation::ani.options(interval = 1/4)
+gganimate(plotsmallfriends_allms, "smallfriends_allmsteps.gif", title_frame = F)
+#something not quite right with the additions. Nodes don't get highlighted until after edge is already changing. # nodes need to get smaller faster # something not quite right with additional edges either. 
 ```
 
