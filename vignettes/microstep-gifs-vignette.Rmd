@@ -208,17 +208,18 @@ for (i in 1:length(listTweened)){
 # }
 # if addedge, merge 'new' edgelist with tweened
 
-postTweendf <- do.call("rbind", listPostTween)
-
-testp <- ggplot(data = postTweendf, aes(x = x.from, y = y.from, xend = x.to, yend = y.to, frame = .frame, color = addedge)) +
-  geom_segment(aes(color = ms)) + 
-  geom_point(size=4, color = 'grey40') + 
-  #geom_text(aes(label=from), size = 3, alpha = .5, color = 'white') + 
-  #scale_colour_manual(guide = guides(color = "none")) + 
-  scale_alpha_identity() + 
-  theme_void() 
-animation::ani.options(interval = 1/10)
-gganimate(testp, "newmethod.gif", title_frame = F)
-
+# postTweendf <- do.call("rbind", listPostTween)
+# 
+# testp <- ggplot(data = postTweendf, aes(x = x.from, y = y.from, xend = x.to, yend = y.to, frame = .frame, color = addedge)) +
+#   geom_segment(aes(color = ms)) + 
+#   geom_point(size=4, color = 'grey40') + 
+#   #geom_text(aes(label=from), size = 3, alpha = .5, color = 'white') + 
+#   #scale_colour_manual(guide = guides(color = "none")) + 
+#   scale_alpha_identity() + 
+#   theme_void() 
+# animation::ani.options(interval = 1/10)
+# gganimate(testp, "newmethod.gif", title_frame = F)
 
 ```
+
+

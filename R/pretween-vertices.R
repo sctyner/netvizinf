@@ -21,6 +21,7 @@ pretween_vertices <- function(pte, layoutparams){
     replace_na(list(addedge = FALSE, rmvedge = FALSE))
   step4$addedge <- as.logical(step4$addedge)
   step4$rmvedge <- as.logical(step4$rmvedge)
+  step4$id <- as.factor(step4$id)
   final_step <- split(step4, as.factor(step4$ms))
   return(final_step)
 }

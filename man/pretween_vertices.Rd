@@ -4,10 +4,10 @@
 \alias{pretween_vertices}
 \title{Create a list of data frames of network microsteps able to be \code{tween}'d.}
 \usage{
-pretween_vertices(microsteps, layoutparams)
+pretween_vertices(pte, layoutparams)
 }
 \arguments{
-\item{microsteps}{\code{list} A list of microsteps of class \code{"data.frame"} of the continuous time Markov chain from one network observation to another.}
+\item{pte}{\code{list} Short for "pre-tweened edges". A list of microsteps of class \code{"data.frame"} of the continuous time Markov chain from one network observation to another. Result of \code{\link{pretween-edges}}}
 
 \item{layoutParams}{\code{list} A named list of arguments to pass to \code{\link{seedLayout()}}. Needs elements named "n" and "directed" at minimum.}
 }

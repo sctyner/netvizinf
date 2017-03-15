@@ -15,7 +15,7 @@ joinData <- function(currentlayout, currentMS, microsteps){
       missfromidx <- which(is.na(joinfrompoint$x.from))
       froms <- joinfrompoint$from[missfromidx]
       joinfrompoint[missfromidx, c("x.from", "y.from")] <-
-        currentlayout[!is.na(match(currentlayout$id, froms)), c("x", "y")] %>% data.frame
+        currentlayout[match(froms,currentlayout$id), c("x", "y")] %>% data.frame
     }
     # remove the logicals because they're not relevant to the TO node.
     rmvcols <- which(names(currentlayout) %in% c("addedge","rmvedge"))
@@ -30,7 +30,7 @@ joinData <- function(currentlayout, currentMS, microsteps){
       missfromidx <- which(is.na(joinfrompoint$x.from))
       froms <- joinfrompoint$from[missfromidx]
       joinfrompoint[missfromidx, c("x.from", "y.from")] <-
-        currentlayout[!is.na(match(currentlayout$id, froms)), c("x", "y")] %>% data.frame
+        currentlayout[match(froms,currentlayout$id), c("x", "y")] %>% data.frame
     }
     rmvcols <- which(names(currentlayout) %in% c("addedge","rmvedge"))
     jointopoint <- left_join(joinfrompoint, currentlayout[,-rmvcols], by = c("to" = "id"))

@@ -194,7 +194,11 @@ gganimate(plotsmallfriends, "purrmethod_smallfriendslabeled2.gif", title_frame =
 ```{r largerexample}
 pte <- pretween_edges(microsteps = ms1)
 ptv <- pretween_vertices(pte = pte, layoutparams = list(n = 16))
+
 library(tweenr)
+
+ptv[[39]] <- ptv[[39]][-13,]
+ptv[[39]]$rmvedge[12] <- TRUE
 
 tweened_nodes <- tween_states(ptv, 10, 2, "linear", 500)
 tweened_nodes$addedge <- as.logical(tweened_nodes$addedge)
@@ -232,8 +236,8 @@ plotsmallfriends_allms <- ggplot() +
   #geom_label(data = vertexdata %>% filter(id == "V1"), aes(frame = .frame, x = rep(-1,58), y = rep(2,58), label = round(ms,4))) + 
   scale_fill_identity() + 
   theme_void()
-animation::ani.options(interval = 1/4)
+animation::ani.options(list(interval = 1/4, ani.width = 200, ani.height = 200))
 gganimate(plotsmallfriends_allms, "smallfriends_allmsteps.gif", title_frame = F)
-#something not quite right with the additions. Nodes don't get highlighted until after edge is already changing. # nodes need to get smaller faster # something not quite right with additional edges either. 
+#something not quite right with the additions. Nodes don't get highlighted until after edge is already changing. # nodes need to get smaller faster # something not quite right with additional edges either. # also should figure out how to make actual size of gif smaller so that it's not so large file-size wise
 ```
 

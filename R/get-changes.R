@@ -34,6 +34,6 @@ get_changes <- function(pte){
         add_row(id = ego, ms = unique(old$microstep), addedge = FALSE, rmvedge = TRUE)
     }
   }
-  changedf$id <- factor(changedf$id, levels = levels(step3$id))
+  changedf$id <- as.factor(changedf$id)
   return(changedf)
 }

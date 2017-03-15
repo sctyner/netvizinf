@@ -18,10 +18,18 @@ colorVertices <- function(vertexdata, pte, colorall = "grey40", colorchange = 'r
   Nchange <- nrow(changess)
   for (i in 1:Nchange){
     chng <- changess[i,]
-    changecolors <- which(vertexdata$id == chng$id & floor(vertexdata$ms) == chng$ms)
-    Nc <- length(changecolors)
-    vertexdata[changecolors, "vcolor"] <- tween_color(c("red", "grey40"),n = Nc, ease = "quartic-in")
-    vertexdata[changecolors, "vsize"] <- tween_numeric(c(5, 1),n = Nc, ease = "quartic-in")
+    if (chng$addedge){
+      changecolors <- which(as.character(vertexdata$id) == as.character(chng$id) & floor(vertexdata$ms) == chng$ms-1)
+      Nc <- length(changecolors)
+      vertexdata[changecolors, "vcolor"] <- tween_color(c("red", "grey40"),n = Nc, ease = "quartic-in")
+      vertexdata[changecolors, "vsize"] <- tween_numeric(c(sizechange, sizeall),n = Nc, ease = "quartic-in")
+    }
+    if (chng$rmvedge) {
+      changecolors <- which(as.character(vertexdata$id) == as.character(chng$id) & floor(vertexdata$ms) == chng$ms)
+      Nc <- length(changecolors)
+      vertexdata[changecolors, "vcolor"] <- tween_color(c("red", "grey40"),n = Nc, ease = "quartic-in")
+      vertexdata[changecolors, "vsize"] <- tween_numeric(c(sizechange, sizeall),n = Nc, ease = "quartic-in")
+    }
   }
   return(vertexdata)
 }
