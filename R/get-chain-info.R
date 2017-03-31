@@ -33,9 +33,9 @@ get_chain_info <- function(ans){
         lapply(ansnull$chain[[l]][[1]][[m]], unlist),
         rbind), stringsAsFactors = FALSE)
       sub <- sub[,-c(1:3,6,10)]
-      sub$X7 <- as.numeric(sub$X7)
-      sub$X8 <- as.numeric(sub$X8)
-      sub$X9 <- as.numeric(sub$X9)
+      sub$X7 <- as.numeric(as.character(sub$X7))
+      sub$X8 <- as.numeric(as.character(sub$X8))
+      sub$X9 <- as.numeric(as.character(sub$X9))
       sub$rep <- l
       sub$period <- m
       res <- rbind(res, sub)
