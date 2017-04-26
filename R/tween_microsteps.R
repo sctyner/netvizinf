@@ -27,6 +27,7 @@
 #'
 #' @export
 tween_microsteps <- function(ptv, pte, microsteps_df) {
+  browser()
   tween_steps <- NULL
   for (i in 1:nrow(microsteps_df)) {
     j <- microsteps_df$step[i]
