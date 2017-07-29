@@ -5,6 +5,7 @@
 #' @export
 #'
 pretween_edges <- function(microsteps){
+  require(dplyr, lib.loc = "/Library/Frameworks/R.framework/Versions/3.4/Resources/oldpkgs")
   B <- length(microsteps)
   microsteps[[1]]$addedge <- FALSE
   microsteps[[1]]$rmvedge <- FALSE

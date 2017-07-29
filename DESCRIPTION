@@ -14,5 +14,5 @@ Imports:
     RSiena,
     ggplot2 (>= 2.0.0),
     geomnet,
-    dplyr
+    Rcpp (>= 0.12.3)
 RoxygenNote: 6.0.1

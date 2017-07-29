@@ -4,6 +4,7 @@
 #'
 #' @export
 get_changes <- function(pte){
+  require(dplyr,lib.loc = "/Library/Frameworks/R.framework/Versions/3.4/Resources/oldpkgs")
   B <- length(pte)
   changedf <- data.frame(id = character(0), ms = integer(0),
                          addedge = logical(0), rmvedge = logical(0))
