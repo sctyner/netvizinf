@@ -18,7 +18,7 @@ create_net_animate <- function(dat){
     geom_curve(data = dat, aes(x=from.x, y=from.y, xend=to.x, yend=to.y, frame = .frame, colour=ecolor, size=esize), curvature=0.1,
                arrow = arrow(angle = 20, length = unit(.1, "inches"))) +
     geom_point(data = nodedata, aes(x=x, y=y, colour=color, size=size, frame = .frame)) +
-    geom_text(data = nodedata, aes(x = x , y = y, label = id), color = 'black', size = 1) +
+    #geom_text(data = nodedata, aes(x = x , y = y, label = id), color = 'black', size = 1) +
     scale_colour_identity() + scale_size_identity() +
     theme_void() +
     coord_fixed()

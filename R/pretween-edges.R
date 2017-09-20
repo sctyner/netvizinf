@@ -17,8 +17,8 @@ pretween_edges <- function(microsteps){
     old <- microsteps[[i-1]]
     new <- microsteps[[i]]
     # find matching rows
-    newInold <- dplyr:::match_data_frame(new[,c("from", "to")], old[,c("from", "to")])
-    oldInnew <- dplyr:::match_data_frame(old[,c("from", "to")], new[,c("from", "to")])
+    newInold <- dplyr050:::match_data_frame(new[,c("from", "to")], old[,c("from", "to")])
+    oldInnew <- dplyr050:::match_data_frame(old[,c("from", "to")], new[,c("from", "to")])
     # if any of the new in old are NA, that means there's a new edge in new that wasn't in old.
     if (anyNA(newInold)){
      new[[which(is.na(newInold)),"addedge"]] <- TRUE
