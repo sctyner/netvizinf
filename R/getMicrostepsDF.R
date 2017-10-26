@@ -18,12 +18,12 @@
 #' @export
 getMicrostepsDF <- function(microsteps) {
   n <- length(microsteps)
-  added <- map2_df(microsteps[-1], microsteps[-n], anti_join, .id="step")
-  removed <- map2_df(microsteps[-n], microsteps[-1], anti_join, .id="step")
+  added <- purrr::map2_df(microsteps[-1], microsteps[-n], dplyr::anti_join, .id="step")
+  removed <- purrr::map2_df(microsteps[-n], microsteps[-1], dplyr::anti_join, .id="step")
   if (nrow(added) > 0) added$type <- "add"
   if (nrow(removed) > 0) removed$type <- "remove"
 
   rbind(added,removed) %>%
-    mutate(step = as.integer(step)) %>%
-    arrange(step)
+    dplyr::mutate(step = as.integer(step)) %>%
+    dplyr::arrange(step)
 }

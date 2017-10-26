@@ -17,8 +17,8 @@ pretween_vertices <- function(pte, layoutparams){
   step3 <- do.call("rbind", step2)
   step3$id <- as.factor(step3$id)
   changedf <- get_changes(pte)
-  step4 <- left_join(step3, changedf, by = c("id" = "id", "ms" = "ms")) %>%
-    replace_na(list(addedge = FALSE, rmvedge = FALSE))
+  step4 <- dplyr::left_join(step3, changedf, by = c("id" = "id", "ms" = "ms")) %>%
+    tidyr::replace_na(list(addedge = FALSE, rmvedge = FALSE))
   step4$addedge <- as.logical(step4$addedge)
   step4$rmvedge <- as.logical(step4$rmvedge)
   step4$id <- as.factor(step4$id)

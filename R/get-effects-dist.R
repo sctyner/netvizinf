@@ -28,12 +28,17 @@ get_effects_dist <- function(dat, struct, N){
   require(RSiena)
   myalg <- sienaAlgorithmCreate( projname = Sys.time() , n3 = 1000)
   nparm <- sum(struct$include)
-  df.ests <- data.frame(matrix(0, nrow = N, ncol = nparm))
-  names(df.ests) <- struct$shortName[struct$include]
+  Parmnames <- struct$shortName[struct$include]
+  Nnr <- sum(Parmnames != "Rate")
+  df.ests <- data.frame(matrix(0, nrow = N, ncol = nparm + Nnr + 1))
+
+  names(df.ests) <- c(Parmnames,
+                      paste("se", Parmnames[which(Parmnames!="Rate")], sep = "_"),
+                      "maxConv")
   for (i in 1:N){
     fits <- siena07(myalg, data = dat, effects = struct, returnDeps = TRUE,
                         batch=TRUE, verbose = FALSE, silent = TRUE)
-    df.ests[i,] <- c(fits$rate, fits$theta)
+    df.ests[i,] <- c(fits$rate, fits$theta, sqrt(diag(fits$covtheta)), fits$tconv.max)
   }
   return(df.ests)
 }
